@@ -1,0 +1,188 @@
+<div class="app-layout">
+
+  <!-- ── Top Nav ── -->
+  <header class="top-nav">
+    <div class="brand">
+      <span class="brand-icon">📏</span>
+      <span class="brand-name">Quantity Measurement</span>
+    </div>
+    <nav class="nav-links">
+      <button class="nav-btn" [class.active]="activeTab === 'calculator'" (click)="switchTab('calculator')">
+        🧮 Calculator
+      </button>
+      <button class="nav-btn" [class.active]="activeTab === 'history'" (click)="switchTab('history')">
+        🕰️ History
+      </button>
+      <button class="nav-btn" [class.active]="activeTab === 'profile'" (click)="switchTab('profile')">
+        👤 Profile
+      </button>
+      <button class="btn-logout" (click)="logout()">Logout</button>
+    </nav>
+  </header>
+
+  <!-- ── Main Content ── -->
+  <main class="main-content">
+
+    <!-- ─── CALCULATOR TAB ─── -->
+    <div *ngIf="activeTab === 'calculator'" class="card">
+      <h2 class="card-title">Unit Calculator</h2>
+      <p class="card-subtitle">Convert, compare and add quantities using real-time backend computation</p>
+
+      <!-- Measurement Type -->
+      <div class="section">
+        <h3 class="section-label">Measurement Type</h3>
+        <div class="chip-group">
+          <button
+            *ngFor="let t of types"
+            class="chip"
+            [class.active]="currentType === (t.toUpperCase() + 'UNIT')"
+            (click)="setType(t)">
+            {{ t }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Action -->
+      <div class="section">
+        <h3 class="section-label">Operation</h3>
+        <div class="chip-group">
+          <button
+            *ngFor="let a of actions"
+            class="chip"
+            [class.active]="currentAction === a.value"
+            (click)="setAction(a.value)">
+            {{ a.label }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Inputs -->
+      <div class="inputs-row">
+
+        <!-- Input 1 -->
+        <div class="input-card">
+          <label>{{ currentAction === 'CONVERT' ? 'From Value' : 'Value 1' }}</label>
+          <div class="input-pair">
+            <input type="number" [(ngModel)]="val1" class="num-input" placeholder="0" />
+            <select [(ngModel)]="unit1" class="unit-select">
+              <option *ngFor="let u of availableUnits" [value]="u">{{ u }}</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Operation symbol -->
+        <div class="op-symbol">
+          <span *ngIf="currentAction === 'COMPARE'">⚖️</span>
+          <span *ngIf="currentAction === 'ADD'">➕</span>
+          <span *ngIf="currentAction === 'CONVERT'">🔄</span>
+        </div>
+
+        <!-- Input 2 -->
+        <div class="input-card">
+          <label *ngIf="currentAction !== 'CONVERT'">Value 2</label>
+          <label *ngIf="currentAction === 'CONVERT'">To Unit</label>
+
+          <div class="input-pair" *ngIf="currentAction !== 'CONVERT'">
+            <input type="number" [(ngModel)]="val2" class="num-input" placeholder="0" />
+            <select [(ngModel)]="unit2" class="unit-select">
+              <option *ngFor="let u of availableUnits" [value]="u">{{ u }}</option>
+            </select>
+          </div>
+
+          <div *ngIf="currentAction === 'CONVERT'">
+            <select [(ngModel)]="unit2" class="unit-select full-width">
+              <option *ngFor="let u of availableUnits" [value]="u">{{ u }}</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Calculate Button -->
+      <button class="btn-calculate" (click)="calculate()" [disabled]="isCalculating">
+        <span *ngIf="!isCalculating">⚡ Calculate</span>
+        <span *ngIf="isCalculating">⏳ Calculating...</span>
+      </button>
+
+      <!-- Result -->
+      <div class="result-area" *ngIf="resultDisplay || errorMessage || isCalculating">
+        <div class="result-box" *ngIf="resultDisplay && !errorMessage">
+          <div class="result-label">Result</div>
+          <div class="result-value">{{ resultDisplay }}</div>
+        </div>
+        <div class="error-box" *ngIf="errorMessage">
+          ⚠️ {{ errorMessage }}
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── HISTORY TAB ─── -->
+    <div *ngIf="activeTab === 'history'" class="card">
+      <h2 class="card-title">Operation History</h2>
+      <p class="card-subtitle">All computations saved from the backend database</p>
+
+      <div class="loading" *ngIf="historyLoading">⏳ Loading history from server...</div>
+      <div class="error-box" *ngIf="historyError">⚠️ {{ historyError }}</div>
+
+      <div class="empty-state" *ngIf="!historyLoading && !historyError && historyRecords.length === 0">
+        <span class="empty-icon">📂</span>
+        <p>No calculations yet. Use the Calculator tab to get started!</p>
+      </div>
+
+      <div class="table-wrapper" *ngIf="!historyLoading && historyRecords.length > 0">
+        <table class="history-table">
+          <thead>
+            <tr>
+              <th>Type</th>
+              <th>Operation</th>
+              <th>Input</th>
+              <th>Result</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let r of historyRecords" [class.error-row]="r.error">
+              <td><span class="badge">{{ r.type }}</span></td>
+              <td><span class="op-badge op-{{ r.action.toLowerCase() }}">{{ r.action }}</span></td>
+              <td class="input-cell">{{ r.input }}</td>
+              <td [class.success-val]="!r.error" [class.error-val]="r.error">{{ r.output }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ─── PROFILE TAB ─── -->
+    <div *ngIf="activeTab === 'profile'" class="card">
+      <h2 class="card-title">My Profile</h2>
+
+      <div class="profile-box">
+        <div class="avatar">{{ avatarLetter }}</div>
+        <div class="profile-info">
+          <h3>{{ userProfile.name }}</h3>
+          <span class="role-tag">{{ userProfile.role }}</span>
+        </div>
+      </div>
+
+      <div class="detail-list">
+        <div class="detail-row">
+          <span class="detail-key">📧 Email</span>
+          <span class="detail-val">{{ userProfile.email }}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-key">📅 Member Since</span>
+          <span class="detail-val">{{ userProfile.joined }}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-key">🔒 Account Status</span>
+          <span class="detail-val success-val">Active & Secured (JWT)</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-key">🗄️ Backend</span>
+          <span class="detail-val">Spring Boot + H2 Database</span>
+        </div>
+      </div>
+
+      <button class="btn-logout-full" (click)="logout()">🚪 Logout</button>
+    </div>
+
+  </main>
+</div>
